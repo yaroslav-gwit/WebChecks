@@ -15,8 +15,9 @@ import (
 )
 
 const red_color = "\033[31m"
-const reset_color = "\033[0m"
 const yellow_color = "\033[33m"
+
+const reset_color = "\033[0m"
 
 var (
 	address        string
