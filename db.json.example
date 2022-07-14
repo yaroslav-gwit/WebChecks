@@ -1,0 +1,5 @@
+[
+    {"site_address":"gateway-it.com", "port":"443", "protocol":"https", "string":"gateway"},
+    {"site_address":"gobuffalo.io", "port":"443", "protocol":"https", "string":"development"},
+    {"site_address":"google.com", "port":"443", "protocol":"https", "string":"google"}
+]

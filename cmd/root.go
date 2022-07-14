@@ -10,9 +10,6 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "endpoint-checker",
 	Short: "Endpoint checker is a small program, that checks the health of your webiste",
-	Long: `A Fast and Flexible Static Site Generator built with
-				  love by spf13 and friends in Go.
-				  Complete documentation is available at https://gohugo.io/documentation/`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		// Empty function
@@ -32,9 +29,8 @@ func init() {
 
 	// Address flag
 	webCmd.Flags().StringVarP(&address, "address", "a", "", "Website address (required)")
-	webCmd.MarkFlagRequired("address")
 	webCmd.Flags().StringVarP(&string_present, "string", "s", "", "Check if this string exists on the page")
-	webCmd.MarkFlagRequired("string")
+	webCmd.MarkFlagsRequiredTogether("address", "string")
 
 	// Port flag
 	webCmd.Flags().StringVar(&port, "port", "443", "Website port")
@@ -42,8 +38,10 @@ func init() {
 
 	// SSL
 	webCmd.Flags().BoolVar(&nossl, "no-ssl", false, "Disable SSL related checks")
-	// webCmd.Flags().BoolVar(&ssl, "ssl", true, "Enable website SSL related check")
-	// webCmd.MarkFlagsMutuallyExclusive("ssl", "no-ssl")
+
+	// File flag
+	webCmd.Flags().StringVarP(&file_database, "file", "f", "db.json", "Use JSON file database to check multiple servers at once")
+	webCmd.MarkFlagsMutuallyExclusive("address", "file")
 
 	// Print version
 	rootCmd.AddCommand(versionCmd)
@@ -51,8 +49,7 @@ func init() {
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Print the version number of endpoint checker",
-	Long:  `All software has versions. This is ours`,
+	Short: "Print the version number of the endpoint checker",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Endpoint checker: v0.1")
 	},

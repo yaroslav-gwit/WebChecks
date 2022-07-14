@@ -1,0 +1,89 @@
+// Force http2
+func transport2() *http2.Transport {
+	return &http2.Transport{
+		DisableCompression: true,
+		AllowHTTP:          false,
+	}
+}
+
+// force http1
+func transport1() *http.Transport {
+	return &http.Transport{
+		// Original configurations from `http.DefaultTransport` variable.
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true, // Set it to false to enforce HTTP/1
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+
+		// Our custom configurations.
+		ResponseHeaderTimeout: 10 * time.Second,
+		DisableCompression:    true,
+		// Set DisableKeepAlives to true when using HTTP/1 otherwise it will cause error: dial tcp [::1]:8090: socket: too many open files
+		DisableKeepAlives: false,
+	}
+}
+
+// Use force http1/http2 functions
+func check_response_code(site_address, port, protocol string) string {
+	http_client := &http.Client{
+		Timeout: 6 * time.Second,
+		// Transport: transport2(),
+	}
+
+	// resp, err := http_client.Get(protocol + "://" + site_address + ":" + port)
+	req, _ := http.NewRequest("GET", (protocol + "://" + site_address + ":" + port), nil)
+	req.Host = site_address
+	resp, err := http_client.Do(req)
+
+	if err != nil {
+		var error = "FATAL ERROR: Can't access your website -> " + err.Error()
+		fmt.Fprintln(os.Stderr, error)
+		os.Exit(1)
+	}
+
+	// dataInBytes, err := ioutil.ReadAll(resp.Body)
+	// if err != nil {
+	// 	var error = "FATAL ERROR: Can't access your website -> " + err.Error()
+	// 	fmt.Fprintln(os.Stderr, error)
+	// 	os.Exit(1)
+	// }
+
+	// var pageContent = string(dataInBytes)
+	// fmt.Println(pageContent)
+
+	defer resp.Body.Close()
+
+	var status_code = strconv.Itoa(resp.StatusCode)
+	return status_code
+}
+
+
+
+
+
+
+
+
+
+
+client := http.Client{}
+req , err := http.NewRequest("GET", url, nil)
+if err != nil {
+    //Handle Error
+}
+
+req.Header = http.Header{
+    "Host": {"www.host.com"},
+    "Content-Type": {"application/json"},
+    "Authorization": {"Bearer Token"},
+}
+
+res , err := client.Do(req)
+if err != nil {
+    //Handle Error
+}
