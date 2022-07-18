@@ -87,3 +87,17 @@ res , err := client.Do(req)
 if err != nil {
     //Handle Error
 }
+
+
+
+
+
+
+
+
+for _, cert := range certs {
+	fmt.Printf("Issuer Name: %s\n", cert.Issuer)
+	fmt.Printf("Expiry: %s \n", cert.NotAfter.Format("2006-January-02"))
+	fmt.Printf("Expiry: %s \n", cert.NotAfter.Format("02/01/2006"))
+	fmt.Printf("Common Name: %s \n", cert.Issuer.CommonName)
+}
