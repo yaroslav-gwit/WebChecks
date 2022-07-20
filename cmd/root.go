@@ -51,19 +51,16 @@ func init() {
 	webCmd.MarkFlagsMutuallyExclusive("file", "address")
 	webCmd.MarkFlagsMutuallyExclusive("file", "port")
 	webCmd.MarkFlagsMutuallyExclusive("file", "protocol")
-	webCmd.MarkFlagsMutuallyExclusive("file", "no-ssl")
 	webCmd.MarkFlagsMutuallyExclusive("file", "string")
 
 	webCmd.MarkFlagsMutuallyExclusive("save-results", "address")
 	webCmd.MarkFlagsMutuallyExclusive("save-results", "port")
 	webCmd.MarkFlagsMutuallyExclusive("save-results", "protocol")
-	webCmd.MarkFlagsMutuallyExclusive("save-results", "no-ssl")
 	webCmd.MarkFlagsMutuallyExclusive("save-results", "string")
 
 	webCmd.MarkFlagsMutuallyExclusive("results-file", "address")
 	webCmd.MarkFlagsMutuallyExclusive("results-file", "port")
 	webCmd.MarkFlagsMutuallyExclusive("results-file", "protocol")
-	webCmd.MarkFlagsMutuallyExclusive("results-file", "no-ssl")
 	webCmd.MarkFlagsMutuallyExclusive("results-file", "string")
 
 	// Print version
