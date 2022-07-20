@@ -148,15 +148,7 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 		var website_protocol_var = site.Protocol
 		var website_string_var = site.String
 
-		if website_protocol_var == "http" {
-			check_cert_date_var = append(check_cert_date_var, "N/A")
-			check_cert_date_var = append(check_cert_date_var, "N/A")
-		} else if !nossl {
-			check_cert_date_var = check_cert_date(website_address_var, website_port_var)
-		} else {
-			check_cert_date_var = append(check_cert_date_var, "N/A")
-			check_cert_date_var = append(check_cert_date_var, "N/A")
-		}
+		check_cert_date_var = checkCertDate(website_address_var, website_port_var, website_protocol_var)
 
 		var check_response_code_var = check_response_code(website_address_var, website_port_var, website_protocol_var)
 		var check_response_time_var = check_response_time(website_address_var, website_port_var, website_protocol_var)
@@ -241,15 +233,7 @@ func render_table_multi() {
 		var website_protocol_var = site.Protocol
 		var website_string_var = site.String
 
-		if website_protocol_var == "http" {
-			check_cert_date_var = append(check_cert_date_var, "N/A")
-			check_cert_date_var = append(check_cert_date_var, "N/A")
-		} else if !nossl {
-			check_cert_date_var = check_cert_date(website_address_var, website_port_var)
-		} else {
-			check_cert_date_var = append(check_cert_date_var, "N/A")
-			check_cert_date_var = append(check_cert_date_var, "N/A")
-		}
+		check_cert_date_var = checkCertDate(website_address_var, website_port_var, website_protocol_var)
 
 		var check_response_code_var = check_response_code(website_address_var, website_port_var, website_protocol_var)
 		var check_response_time_var = check_response_time(website_address_var, website_port_var, website_protocol_var)
@@ -289,20 +273,6 @@ func render_table_multi() {
 
 func render_table_signle() {
 	var response = finalResponseFunc()
-
-	var check_cert_date_var []string
-	if protocol == "http" {
-		check_cert_date_var = append(check_cert_date_var, "N/A")
-		check_cert_date_var = append(check_cert_date_var, "N/A")
-	} else if !nossl {
-		check_cert_date_var = check_cert_date(address, port)
-	} else {
-		check_cert_date_var = append(check_cert_date_var, "N/A")
-		check_cert_date_var = append(check_cert_date_var, "N/A")
-	}
-
-	response.cert_end_date.status = check_cert_date_var[0]
-	response.cert_end_date.date = check_cert_date_var[1]
 
 	var cert_end_date_date string
 	if response.cert_end_date.status == "yellow" {
@@ -347,7 +317,7 @@ func finalResponseFunc() finalResponseStruct {
 	var website_address_var = address
 
 	if !nossl {
-		check_cert_date_var = check_cert_date(address, port)
+		check_cert_date_var = checkCertDate(address, port, protocol)
 	} else {
 		check_cert_date_var = append(check_cert_date_var, "N/A")
 		check_cert_date_var = append(check_cert_date_var, "N/A")
@@ -368,7 +338,15 @@ func finalResponseFunc() finalResponseStruct {
 	return responseVar
 }
 
-func check_cert_date(site_address string, port string) []string {
+func checkCertDate(site_address string, port string, protocol string) []string {
+	if protocol != "https" {
+		var cert_date_list []string
+		cert_date_list = append(cert_date_list, "N/A")
+		cert_date_list = append(cert_date_list, "N/A")
+
+		return cert_date_list
+	}
+
 	conf := &tls.Config{
 		InsecureSkipVerify: true,
 	}
