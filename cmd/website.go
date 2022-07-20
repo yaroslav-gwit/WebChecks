@@ -234,6 +234,7 @@ func render_table_multi() {
 		var website_port_var = site.Port
 		var website_protocol_var = site.Protocol
 		var website_string_var = site.String
+		var pageToCheck = site.PageToCheck
 
 		check_cert_date_var = checkCertDate(website_address_var, website_port_var, website_protocol_var)
 
