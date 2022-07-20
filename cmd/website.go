@@ -281,6 +281,8 @@ func render_table_signle() {
 		cert_end_date_date = yellow_color + response.cert_end_date.date + reset_color
 	} else if response.cert_end_date.status == "red" {
 		cert_end_date_date = red_color + response.cert_end_date.date + reset_color
+	} else {
+		cert_end_date_date = response.cert_end_date.date
 	}
 
 	var string_present string
