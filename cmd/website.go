@@ -290,8 +290,21 @@ func render_table_multi() {
 func render_table_signle() {
 	var response = finalResponseFunc()
 
-	var cert_end_date_date string
+	var check_cert_date_var []string
+	if protocol == "http" {
+		check_cert_date_var = append(check_cert_date_var, "N/A")
+		check_cert_date_var = append(check_cert_date_var, "N/A")
+	} else if !nossl {
+		check_cert_date_var = check_cert_date(address, port)
+	} else {
+		check_cert_date_var = append(check_cert_date_var, "N/A")
+		check_cert_date_var = append(check_cert_date_var, "N/A")
+	}
 
+	response.cert_end_date.status = check_cert_date_var[0]
+	response.cert_end_date.date = check_cert_date_var[1]
+
+	var cert_end_date_date string
 	if response.cert_end_date.status == "yellow" {
 		cert_end_date_date = yellow_color + response.cert_end_date.date + reset_color
 	} else if response.cert_end_date.status == "red" {
