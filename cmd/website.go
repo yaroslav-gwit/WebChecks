@@ -89,7 +89,7 @@ func main() {
 			var json_string = string(json_data)
 			fmt.Println(json_string)
 		} else {
-			render_table_signle()
+			renderTableSingle()
 		}
 	} else {
 		// Multisite functions
@@ -107,7 +107,7 @@ func main() {
 			var json_string = string(json_data)
 			fmt.Println(json_string)
 		} else {
-			render_table_multi()
+			renderTableMulti()
 		}
 	}
 }
@@ -152,9 +152,9 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 
 		check_cert_date_var = checkCertDate(website_address_var, website_port_var, website_protocol_var)
 
-		var check_response_code_var = check_response_code(website_address_var, website_port_var, website_protocol_var)
-		var check_response_time_var = check_response_time(website_address_var, website_port_var, website_protocol_var)
-		var check_for_string_var = check_for_string(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
+		var check_response_code_var = checkResponseCode(website_address_var, website_port_var, website_protocol_var)
+		var check_response_time_var = checkResponseTime(website_address_var, website_port_var, website_protocol_var)
+		var check_for_string_var = checkForString(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
 
 		var responseVar = finalResponseStruct{}
 		responseVar.cert_end_date.status = check_cert_date_var[0]
@@ -202,7 +202,7 @@ func jsonOutputFuncSingle() jsonOutputStruct {
 	return sites
 }
 
-func render_table_multi() {
+func renderTableMulti() {
 	var site_list = jsonInputFileFunc()
 	var bar_descrition = "Working... "
 	var id_number = 0
@@ -238,9 +238,9 @@ func render_table_multi() {
 
 		check_cert_date_var = checkCertDate(website_address_var, website_port_var, website_protocol_var)
 
-		var check_response_code_var = check_response_code(website_address_var, website_port_var, website_protocol_var)
-		var check_response_time_var = check_response_time(website_address_var, website_port_var, website_protocol_var)
-		var check_for_string_var = check_for_string(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
+		var check_response_code_var = checkResponseCode(website_address_var, website_port_var, website_protocol_var)
+		var check_response_time_var = checkResponseTime(website_address_var, website_port_var, website_protocol_var)
+		var check_for_string_var = checkForString(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
 
 		var responseVar = finalResponseStruct{}
 		responseVar.cert_end_date.date = check_cert_date_var[1]
@@ -274,7 +274,7 @@ func render_table_multi() {
 	t.Render()
 }
 
-func render_table_signle() {
+func renderTableSingle() {
 	var response = finalResponseFunc()
 
 	var cert_end_date_date string
@@ -323,9 +323,9 @@ func finalResponseFunc() finalResponseStruct {
 
 	check_cert_date_var = checkCertDate(address, port, protocol)
 
-	var check_response_code_var = check_response_code(address, port, protocol)
-	var check_response_time_var = check_response_time(address, port, protocol)
-	var check_for_string_var = check_for_string(address, port, protocol, string_present, pageToCheck)
+	var check_response_code_var = checkResponseCode(address, port, protocol)
+	var check_response_time_var = checkResponseTime(address, port, protocol)
+	var check_for_string_var = checkForString(address, port, protocol, string_present, pageToCheck)
 
 	var responseVar = finalResponseStruct{}
 	responseVar.cert_end_date.status = check_cert_date_var[0]
@@ -391,7 +391,7 @@ func checkCertDate(site_address string, port string, protocol string) []string {
 	return cert_date_list
 }
 
-func check_response_code(site_address, port, protocol string) string {
+func checkResponseCode(site_address, port, protocol string) string {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -419,7 +419,7 @@ func check_response_code(site_address, port, protocol string) string {
 	return status_code
 }
 
-func check_response_time(site_address, port, protocol string) string {
+func checkResponseTime(site_address, port, protocol string) string {
 	var start_time = time.Now()
 
 	tr := &http.Transport{
@@ -449,7 +449,7 @@ func check_response_time(site_address, port, protocol string) string {
 	return time_elapsed
 }
 
-func check_for_string(site_address, port, protocol, string_to_look_for, pageToCheck string) string {
+func checkForString(site_address, port, protocol, string_to_look_for, pageToCheck string) string {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
