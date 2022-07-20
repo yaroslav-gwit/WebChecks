@@ -41,8 +41,8 @@ func init() {
 	webCmd.Flags().StringVar(&port, "port", "443", "Website port")
 	webCmd.Flags().StringVar(&protocol, "protocol", "https", "Website connection protocol")
 
-	// SSL
-	webCmd.Flags().BoolVar(&nossl, "no-ssl", false, "Disable SSL related checks")
+	// Page to check
+	webCmd.Flags().StringVar(&pageToCheck, "page", "/", "Endpoint webpage to check")
 
 	// File flag
 	webCmd.Flags().StringVarP(&file_database, "file", "f", "db.json", "Use JSON file database to check multiple servers at once")

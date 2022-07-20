@@ -24,13 +24,13 @@ const reset_color = "\033[0m"
 var (
 	address        string
 	port           string
-	nossl          bool
 	protocol       string
 	string_present string
 	file_database  string
 	json_output    bool
 	save_results   bool
 	results_file   string
+	pageToCheck    string
 
 	webCmd = &cobra.Command{
 		Use:   "web",
@@ -58,6 +58,7 @@ type jsonInputStruct []struct {
 	Port        string `json:"port,omitempty"`
 	Protocol    string `json:"protocol,omitempty"`
 	String      string `json:"string,omitempty"`
+	PageToCheck string `json:"page,omitempty"`
 }
 
 type jsonOutputStruct struct {
@@ -147,12 +148,13 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 		var website_port_var = site.Port
 		var website_protocol_var = site.Protocol
 		var website_string_var = site.String
+		var pageToCheck = site.PageToCheck
 
 		check_cert_date_var = checkCertDate(website_address_var, website_port_var, website_protocol_var)
 
 		var check_response_code_var = check_response_code(website_address_var, website_port_var, website_protocol_var)
 		var check_response_time_var = check_response_time(website_address_var, website_port_var, website_protocol_var)
-		var check_for_string_var = check_for_string(website_address_var, website_port_var, website_protocol_var, website_string_var)
+		var check_for_string_var = check_for_string(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
 
 		var responseVar = finalResponseStruct{}
 		responseVar.cert_end_date.status = check_cert_date_var[0]
@@ -237,7 +239,7 @@ func render_table_multi() {
 
 		var check_response_code_var = check_response_code(website_address_var, website_port_var, website_protocol_var)
 		var check_response_time_var = check_response_time(website_address_var, website_port_var, website_protocol_var)
-		var check_for_string_var = check_for_string(website_address_var, website_port_var, website_protocol_var, website_string_var)
+		var check_for_string_var = check_for_string(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
 
 		var responseVar = finalResponseStruct{}
 		responseVar.cert_end_date.date = check_cert_date_var[1]
@@ -316,16 +318,11 @@ func finalResponseFunc() finalResponseStruct {
 	var check_cert_date_var []string
 	var website_address_var = address
 
-	if !nossl {
-		check_cert_date_var = checkCertDate(address, port, protocol)
-	} else {
-		check_cert_date_var = append(check_cert_date_var, "N/A")
-		check_cert_date_var = append(check_cert_date_var, "N/A")
-	}
+	check_cert_date_var = checkCertDate(address, port, protocol)
 
 	var check_response_code_var = check_response_code(address, port, protocol)
 	var check_response_time_var = check_response_time(address, port, protocol)
-	var check_for_string_var = check_for_string(address, port, protocol, string_present)
+	var check_for_string_var = check_for_string(address, port, protocol, string_present, pageToCheck)
 
 	var responseVar = finalResponseStruct{}
 	responseVar.cert_end_date.status = check_cert_date_var[0]
@@ -449,7 +446,7 @@ func check_response_time(site_address, port, protocol string) string {
 	return time_elapsed
 }
 
-func check_for_string(site_address, port, protocol, string_to_look_for string) string {
+func check_for_string(site_address, port, protocol, string_to_look_for, pageToCheck string) string {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -459,7 +456,11 @@ func check_for_string(site_address, port, protocol, string_to_look_for string) s
 		Transport: tr,
 	}
 
-	req, _ := http.NewRequest("GET", (protocol + "://" + site_address + ":" + port), nil)
+	if len(pageToCheck) < 1 {
+		pageToCheck = "/"
+	}
+
+	req, _ := http.NewRequest("GET", (protocol + "://" + site_address + ":" + port + pageToCheck), nil)
 	req.Host = site_address
 	resp, err := http_client.Do(req)
 
