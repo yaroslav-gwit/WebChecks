@@ -17,9 +17,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const red_color = "\033[31m"
-const yellow_color = "\033[33m"
-const reset_color = "\033[0m"
+const redColor = "\033[31m"
+const yellowColor = "\033[33m"
+const boldFont = "\033[1m"
+const resetStyle = "\033[0m"
 
 var (
 	address        string
@@ -225,7 +226,14 @@ func renderTableMulti() {
 	// t.SetAutoMerge(true)
 	t.SetAutoMergeHeaders(true)
 	// Set headers and footers
-	t.SetHeaders("ID", "Website address", "Certificate end date", "HTTP status", "Response time (ms)", "String present")
+	var headerID = boldFont + "ID" + resetStyle
+	var headerWebsiteAddress = boldFont + "Website address" + resetStyle
+	var headerCertificateEndDate = boldFont + "Certificate end date" + resetStyle
+	var headerHttpStatus = boldFont + "HTTP status" + resetStyle
+	var headerResponseTime = boldFont + "Response time (ms)" + resetStyle
+	var headerStringPresent = boldFont + "String present" + resetStyle
+	t.SetHeaders(headerID, headerWebsiteAddress, headerCertificateEndDate, headerHttpStatus, headerResponseTime, headerStringPresent)
+	t.SetLineStyle(table.StyleBrightCyan)
 	// t.SetFooters("ID", "Website address", "Certificate end date")
 
 	for _, site := range site_list {
@@ -246,9 +254,9 @@ func renderTableMulti() {
 		responseVar.cert_end_date.date = check_cert_date_var[1]
 
 		if check_cert_date_var[0] == "yellow" {
-			responseVar.cert_end_date.date = yellow_color + responseVar.cert_end_date.date + reset_color
+			responseVar.cert_end_date.date = yellowColor + responseVar.cert_end_date.date + resetStyle
 		} else if check_cert_date_var[0] == "red" {
-			responseVar.cert_end_date.date = red_color + responseVar.cert_end_date.date + reset_color
+			responseVar.cert_end_date.date = redColor + responseVar.cert_end_date.date + resetStyle
 		}
 
 		responseVar.website_address = website_address_var
@@ -257,7 +265,7 @@ func renderTableMulti() {
 
 		var string_present string
 		if check_for_string_var != "Yes" {
-			string_present = red_color + check_for_string_var + reset_color
+			string_present = redColor + check_for_string_var + resetStyle
 		} else {
 			string_present = check_for_string_var
 		}
@@ -279,16 +287,16 @@ func renderTableSingle() {
 
 	var cert_end_date_date string
 	if response.cert_end_date.status == "yellow" {
-		cert_end_date_date = yellow_color + response.cert_end_date.date + reset_color
+		cert_end_date_date = yellowColor + response.cert_end_date.date + resetStyle
 	} else if response.cert_end_date.status == "red" {
-		cert_end_date_date = red_color + response.cert_end_date.date + reset_color
+		cert_end_date_date = redColor + response.cert_end_date.date + resetStyle
 	} else {
 		cert_end_date_date = response.cert_end_date.date
 	}
 
 	var string_present string
 	if response.string_present != "Yes" {
-		string_present = red_color + response.string_present + reset_color
+		string_present = redColor + response.string_present + resetStyle
 	} else {
 		string_present = response.string_present
 	}
@@ -305,7 +313,15 @@ func renderTableSingle() {
 	t.SetAutoMerge(true)
 	t.SetAutoMergeHeaders(true)
 	// Set headers and footers
-	t.SetHeaders("ID", "Website address", "Certificate end date", "HTTP status", "Response time (ms)", "String present")
+	var headerID = boldFont + "ID" + resetStyle
+	var headerWebsiteAddress = boldFont + "Website address" + resetStyle
+	var headerCertificateEndDate = boldFont + "Certificate end date" + resetStyle
+	var headerHttpStatus = boldFont + "HTTP status" + resetStyle
+	var headerResponseTime = boldFont + "Response time (ms)" + resetStyle
+	var headerStringPresent = boldFont + "String present" + resetStyle
+	t.SetHeaders(headerID, headerWebsiteAddress, headerCertificateEndDate, headerHttpStatus, headerResponseTime, headerStringPresent)
+	t.SetLineStyle(table.StyleBrightCyan)
+	// t.SetHeaders("ID", "Website address", "Certificate end date", "HTTP status", "Response time (ms)", "String present")
 	// t.SetFooters("ID", "Website address", "Certificate end date")
 
 	// Start adding table rows
