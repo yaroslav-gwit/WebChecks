@@ -228,8 +228,8 @@ func renderTableMulti() {
 	t := table.New(os.Stdout)
 	// Set alignments
 	// t.SetHeaderAlignment(table.AlignLeft, table.AlignLeft, table.AlignLeft)
-	t.SetFooterAlignment(table.AlignLeft, table.AlignLeft, table.AlignLeft)
-	t.SetAlignment(table.AlignCenter, table.AlignCenter, table.AlignLeft, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignCenter)
+	// t.SetFooterAlignment(table.AlignLeft, table.AlignLeft, table.AlignLeft)
+	t.SetAlignment(table.AlignCenter, table.AlignLeft, table.AlignLeft, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignCenter)
 	// Set dividers
 	t.SetDividers(table.UnicodeRoundedDividers)
 	// Set automerge
