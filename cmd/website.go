@@ -71,6 +71,7 @@ type jsonOutputStruct struct {
 	HttpStatus    string `json:"http_status,omitempty"`
 	ResponseTime  string `json:"response_time,omitempty"`
 	StringPresent string `json:"string_present,omitempty"`
+	StringChecked string `json:"string_checked,omitempty"`
 	CertEndDate   string `json:"cert_end_date,omitempty"`
 	CertStatus    string `json:"cert_status,omitempty"`
 }
@@ -155,6 +156,7 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 		var pageToCheck = site.PageToCheck
 		var host = site.Host
 		var page = site.PageToCheck
+		var stringChecked = site.String
 		if len(page) < 1 {
 			page = "/"
 		}
@@ -184,6 +186,7 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 		json_output.CertEndDate = responseVar.cert_end_date.date
 		json_output.Host = host
 		json_output.Page = page
+		json_output.StringChecked = stringChecked
 		sites = append(sites, json_output)
 
 		bar.Add(1)
@@ -229,7 +232,7 @@ func renderTableMulti() {
 	// Set alignments
 	// t.SetHeaderAlignment(table.AlignLeft, table.AlignLeft, table.AlignLeft)
 	// t.SetFooterAlignment(table.AlignLeft, table.AlignLeft, table.AlignLeft)
-	t.SetAlignment(table.AlignCenter, table.AlignLeft, table.AlignLeft, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignCenter)
+	t.SetAlignment(table.AlignCenter, table.AlignLeft, table.AlignLeft, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignLeft)
 	// Set dividers
 	t.SetDividers(table.UnicodeRoundedDividers)
 	// Set automerge
@@ -244,7 +247,8 @@ func renderTableMulti() {
 	var headerHttpStatus = boldFont + "HTTP status" + resetStyle
 	var headerResponseTime = boldFont + "Response time (ms)" + resetStyle
 	var headerStringPresent = boldFont + "String present" + resetStyle
-	t.SetHeaders(headerID, headerHost, headerWebsiteAddress, headerPage, headerCertificateEndDate, headerHttpStatus, headerResponseTime, headerStringPresent)
+	var headerStringChecked = boldFont + "String checked" + resetStyle
+	t.SetHeaders(headerID, headerHost, headerWebsiteAddress, headerPage, headerCertificateEndDate, headerHttpStatus, headerResponseTime, headerStringPresent, headerStringChecked)
 	t.SetLineStyle(table.StyleBrightCyan)
 	// t.SetFooters("ID", "Website address", "Certificate end date")
 
@@ -260,6 +264,7 @@ func renderTableMulti() {
 		if len(page) < 1 {
 			page = "/"
 		}
+		var stringChecked = site.String
 
 		check_cert_date_var = checkCertDate(website_address_var, website_port_var, website_protocol_var)
 
@@ -291,7 +296,7 @@ func renderTableMulti() {
 		// Start adding table rows
 		id_number = id_number + 1
 		var id_string = strconv.Itoa(id_number)
-		t.AddRow(id_string, host, responseVar.website_address, page, responseVar.cert_end_date.date, responseVar.http_status, responseVar.response_time, responseVar.string_present)
+		t.AddRow(id_string, host, responseVar.website_address, page, responseVar.cert_end_date.date, responseVar.http_status, responseVar.response_time, responseVar.string_present, stringChecked)
 
 		bar.Add(1)
 	}
