@@ -493,7 +493,7 @@ func checkForString(site_address, port, protocol, string_to_look_for, pageToChec
 	}
 
 	http_client := &http.Client{
-		Timeout:   20 * time.Second,
+		Timeout:   30 * time.Second,
 		Transport: tr,
 	}
 
