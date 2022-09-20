@@ -445,6 +445,7 @@ func checkCertDate(site_address string, port string, protocol string) certData {
 	certDataVar.status = cert_status
 	certDataVar.date = cert_date
 	certDataVar.days_before_expiration = daysUntilExpStr
+	fmt.Println(certDataVar)
 
 	return certDataVar
 }
