@@ -164,6 +164,7 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 		var host = site.Host
 		var page = site.PageToCheck
 		var stringChecked = site.String
+
 		if len(page) < 1 {
 			page = "/"
 		}
@@ -174,7 +175,7 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 			certDataVar.status = "N/A"
 			certDataVar.days_before_expiration = "N/A"
 		} else {
-			certDataVar = checkCertDate(address, port, protocol)
+			certDataVar = checkCertDate(website_address_var, port, protocol)
 		}
 
 		var check_response_code_var = checkResponseCode(website_address_var, website_port_var, website_protocol_var)
@@ -395,6 +396,10 @@ func finalResponseFunc() finalResponseStruct {
 }
 
 func checkCertDate(site_address string, port string, protocol string) certData {
+	if site_address == "" {
+		log.Fatal("Site address was not specified!")
+	}
+
 	var certDataVar = certData{}
 
 	if protocol != "https" {
@@ -445,7 +450,6 @@ func checkCertDate(site_address string, port string, protocol string) certData {
 	certDataVar.status = cert_status
 	certDataVar.date = cert_date
 	certDataVar.days_before_expiration = daysUntilExpStr
-	fmt.Println(certDataVar)
 
 	return certDataVar
 }
