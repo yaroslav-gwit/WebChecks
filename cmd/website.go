@@ -43,11 +43,18 @@ var (
 	}
 )
 
+type certData struct {
+	status                 string
+	days_before_expiration string
+	date                   string
+}
+
 type finalResponseStruct struct {
 	website_address string
 	cert_end_date   struct {
-		status string
-		date   string
+		status                 string
+		days_before_expiration string
+		date                   string
 	}
 	http_status    string
 	response_time  string
@@ -64,16 +71,17 @@ type jsonInputStruct []struct {
 }
 
 type jsonOutputStruct struct {
-	ID            string `json:"id,omitempty"`
-	Host          string `json:"host,omitempty"`
-	SiteAddress   string `json:"site_address,omitempty"`
-	Page          string `json:"page,omitempty"`
-	HttpStatus    string `json:"http_status,omitempty"`
-	ResponseTime  string `json:"response_time,omitempty"`
-	StringPresent string `json:"string_present,omitempty"`
-	StringChecked string `json:"string_checked,omitempty"`
-	CertEndDate   string `json:"cert_end_date,omitempty"`
-	CertStatus    string `json:"cert_status,omitempty"`
+	ID                string `json:"id,omitempty"`
+	Host              string `json:"host,omitempty"`
+	SiteAddress       string `json:"site_address,omitempty"`
+	Page              string `json:"page,omitempty"`
+	HttpStatus        string `json:"http_status,omitempty"`
+	ResponseTime      string `json:"response_time,omitempty"`
+	StringPresent     string `json:"string_present,omitempty"`
+	StringChecked     string `json:"string_checked,omitempty"`
+	CertEndDate       string `json:"cert_end_date,omitempty"`
+	CertDaysBeforeEnd string `json:"cert_days_left,omitempty"`
+	CertStatus        string `json:"cert_status,omitempty"`
 }
 
 func main() {
@@ -148,7 +156,6 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 
 	for _, site := range json_file_input {
 		// bar_descrition = site.SiteAddress
-		var check_cert_date_var []string
 		var website_address_var = site.SiteAddress
 		var website_port_var = site.Port
 		var website_protocol_var = site.Protocol
@@ -161,15 +168,24 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 			page = "/"
 		}
 
-		check_cert_date_var = checkCertDate(website_address_var, website_port_var, website_protocol_var)
+		var certDataVar = certData{}
+		if website_protocol_var == "http" {
+			certDataVar.date = "N/A"
+			certDataVar.status = "N/A"
+			certDataVar.days_before_expiration = "N/A"
+		} else {
+			certDataVar = checkCertDate(address, port, protocol)
+		}
 
 		var check_response_code_var = checkResponseCode(website_address_var, website_port_var, website_protocol_var)
 		var check_response_time_var = checkResponseTime(website_address_var, website_port_var, website_protocol_var)
 		var check_for_string_var = checkForString(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
 
 		var responseVar = finalResponseStruct{}
-		responseVar.cert_end_date.status = check_cert_date_var[0]
-		responseVar.cert_end_date.date = check_cert_date_var[1]
+		responseVar.cert_end_date.status = certDataVar.status
+		responseVar.cert_end_date.date = certDataVar.date
+		responseVar.cert_end_date.days_before_expiration = certDataVar.days_before_expiration
+
 		responseVar.website_address = website_address_var
 		responseVar.http_status = check_response_code_var
 		responseVar.response_time = check_response_time_var
@@ -184,6 +200,7 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 		json_output.StringPresent = responseVar.string_present
 		json_output.CertStatus = responseVar.cert_end_date.status
 		json_output.CertEndDate = responseVar.cert_end_date.date
+		json_output.CertDaysBeforeEnd = responseVar.cert_end_date.days_before_expiration
 		json_output.Host = host
 		json_output.Page = page
 		json_output.StringChecked = stringChecked
@@ -253,7 +270,6 @@ func renderTableMulti() {
 	// t.SetFooters("ID", "Website address", "Certificate end date")
 
 	for _, site := range site_list {
-		var check_cert_date_var []string
 		var website_address_var = site.SiteAddress
 		var website_port_var = site.Port
 		var website_protocol_var = site.Protocol
@@ -266,18 +282,19 @@ func renderTableMulti() {
 		}
 		var stringChecked = site.String
 
-		check_cert_date_var = checkCertDate(website_address_var, website_port_var, website_protocol_var)
+		var checkCertDateVar = certData{}
+		checkCertDateVar = checkCertDate(website_address_var, website_port_var, website_protocol_var)
 
 		var check_response_code_var = checkResponseCode(website_address_var, website_port_var, website_protocol_var)
 		var check_response_time_var = checkResponseTime(website_address_var, website_port_var, website_protocol_var)
 		var check_for_string_var = checkForString(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
 
 		var responseVar = finalResponseStruct{}
-		responseVar.cert_end_date.date = check_cert_date_var[1]
+		responseVar.cert_end_date.date = checkCertDateVar.date
 
-		if check_cert_date_var[0] == "yellow" {
+		if checkCertDateVar.status == "yellow" {
 			responseVar.cert_end_date.date = yellowColor + responseVar.cert_end_date.date + resetStyle
-		} else if check_cert_date_var[0] == "red" {
+		} else if checkCertDateVar.status == "red" {
 			responseVar.cert_end_date.date = redColor + responseVar.cert_end_date.date + resetStyle
 		}
 
@@ -356,18 +373,19 @@ func renderTableSingle() {
 }
 
 func finalResponseFunc() finalResponseStruct {
-	var check_cert_date_var []string
 	var website_address_var = address
+	var checkCertDateVar = certData{}
 
-	check_cert_date_var = checkCertDate(address, port, protocol)
+	checkCertDateVar = checkCertDate(address, port, protocol)
 
 	var check_response_code_var = checkResponseCode(address, port, protocol)
 	var check_response_time_var = checkResponseTime(address, port, protocol)
 	var check_for_string_var = checkForString(address, port, protocol, string_present, pageToCheck)
 
 	var responseVar = finalResponseStruct{}
-	responseVar.cert_end_date.status = check_cert_date_var[0]
-	responseVar.cert_end_date.date = check_cert_date_var[1]
+	responseVar.cert_end_date.status = checkCertDateVar.status
+	responseVar.cert_end_date.date = checkCertDateVar.date
+	responseVar.cert_end_date.days_before_expiration = checkCertDateVar.days_before_expiration
 	responseVar.website_address = website_address_var
 	responseVar.http_status = check_response_code_var
 	responseVar.response_time = check_response_time_var
@@ -376,13 +394,14 @@ func finalResponseFunc() finalResponseStruct {
 	return responseVar
 }
 
-func checkCertDate(site_address string, port string, protocol string) []string {
-	if protocol != "https" {
-		var cert_date_list []string
-		cert_date_list = append(cert_date_list, "N/A")
-		cert_date_list = append(cert_date_list, "N/A")
+func checkCertDate(site_address string, port string, protocol string) certData {
+	var certDataVar = certData{}
 
-		return cert_date_list
+	if protocol != "https" {
+		certDataVar.date = "N/A"
+		certDataVar.status = "N/A"
+		certDataVar.days_before_expiration = "N/A"
+		return certDataVar
 	}
 
 	conf := &tls.Config{
@@ -390,16 +409,15 @@ func checkCertDate(site_address string, port string, protocol string) []string {
 	}
 
 	conn, err := tls.Dial("tcp", (site_address + ":" + port), conf)
-
 	if err != nil {
 		// var error = "CERT_DATE FATAL ERROR: Can't access your website -> " + err.Error()
 		// fmt.Fprintln(os.Stderr, error)
 		// os.Exit(1)
 		fmt.Println("\nERR_IN_FUNC: check_cert_date: " + err.Error())
-		var err_list []string
-		err_list = append(err_list, "ERROR")
-		err_list = append(err_list, "ERROR")
-		return err_list
+		certDataVar.date = "N/A"
+		certDataVar.status = "N/A"
+		certDataVar.days_before_expiration = "N/A"
+		return certDataVar
 	}
 
 	defer conn.Close()
@@ -407,6 +425,8 @@ func checkCertDate(site_address string, port string, protocol string) []string {
 
 	var cert_status string
 	var cert_date = certs[0].NotAfter.Format("02/01/2006")
+	var daysUntilExp = time.Since(certs[0].NotAfter)
+	var daysUntilExpStr = fmt.Sprintf("%d", daysUntilExp/24)
 
 	var ember_cert_status = time.Now().AddDate(0, 0, +20)
 
@@ -422,11 +442,11 @@ func checkCertDate(site_address string, port string, protocol string) []string {
 		cert_status = "yellow"
 	}
 
-	var cert_date_list []string
-	cert_date_list = append(cert_date_list, cert_status)
-	cert_date_list = append(cert_date_list, cert_date)
+	certDataVar.status = cert_status
+	certDataVar.date = cert_date
+	certDataVar.days_before_expiration = daysUntilExpStr
 
-	return cert_date_list
+	return certDataVar
 }
 
 func checkResponseCode(site_address, port, protocol string) string {
