@@ -425,8 +425,8 @@ func checkCertDate(site_address string, port string, protocol string) certData {
 
 	var cert_status string
 	var cert_date = certs[0].NotAfter.Format("02/01/2006")
-	var daysUntilExp = time.Since(certs[0].NotAfter).Hours()
-	var daysUntilExpStr = fmt.Sprintf("%.0f", daysUntilExp/24.0)
+	var daysUntilExp = (time.Since(certs[0].NotAfter).Hours() / 24.0) * -1
+	var daysUntilExpStr = fmt.Sprintf("%.0f", daysUntilExp)
 
 	var ember_cert_status = time.Now().AddDate(0, 0, +20)
 
