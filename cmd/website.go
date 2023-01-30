@@ -74,6 +74,7 @@ type jsonOutputStruct struct {
 	ID                string `json:"id,omitempty"`
 	Host              string `json:"host,omitempty"`
 	SiteAddress       string `json:"site_address,omitempty"`
+	PageChecked       string `json:"page_checked,omitempty"`
 	Page              string `json:"page,omitempty"`
 	HttpStatus        string `json:"http_status,omitempty"`
 	ResponseTime      string `json:"response_time,omitempty"`
@@ -196,6 +197,7 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 		var id_string = strconv.Itoa(id_number)
 		json_output.ID = id_string
 		json_output.SiteAddress = responseVar.website_address
+		json_output.PageChecked = website_protocol_var + "://" + website_address_var + ":" + website_port_var + page
 		json_output.HttpStatus = responseVar.http_status
 		json_output.ResponseTime = responseVar.response_time
 		json_output.StringPresent = responseVar.string_present

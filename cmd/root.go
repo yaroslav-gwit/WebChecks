@@ -12,7 +12,7 @@ var rootCmd = &cobra.Command{
 	Short: "Endpoint checker is a small program, that checks the health of your webiste",
 
 	Run: func(cmd *cobra.Command, args []string) {
-		// Empty function
+		cmd.Help()
 	},
 }
 
