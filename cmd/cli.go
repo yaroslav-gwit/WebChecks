@@ -103,15 +103,28 @@ func main() {
 }
 
 func readConfigFile() jsonInputStruct {
-	content, err := os.ReadFile(fileDatabase)
+	var content []byte
+	var err error
+	_, err = os.Stat(fileDatabase)
+    if os.IsNotExist(err) {
+		_, optDbFileErr := os.Stat("/opt/webchecks/db.json")
+		if err != nil {
+			log.Fatal(optDbFileErr)
+		}
+		content, err = os.ReadFile("/opt/webchecks/db.json")
+    } else {
+		content, err = os.ReadFile(fileDatabase)
+    }
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	jsonData := jsonInputStruct{}
 	err = json.Unmarshal([]byte(content), &jsonData)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	for i, v := range jsonData {
 		if v.SslAlertTime <= 0 {
 			jsonData[i].SslAlertTime = 30
@@ -123,6 +136,7 @@ func readConfigFile() jsonInputStruct {
 			jsonData[i].RedResponseTime = 500
 		}
 	}
+
 	return jsonData
 }
 

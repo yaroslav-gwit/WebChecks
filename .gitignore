@@ -1,3 +1,5 @@
 endpoint-checker
 db.json
 webchecks
+bin/webchecks
+bin
