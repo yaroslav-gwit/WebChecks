@@ -14,4 +14,4 @@ runj:
 install:
 	mkdir -p /opt/webchecks/
 	/usr/local/go/bin/go build -o /opt/webchecks/webchecks main.go
-	cp db.json.example-2 /opt/webchecks/db.json
+	cp db.json.example-1 /opt/webchecks/db.json
