@@ -108,16 +108,19 @@ func readConfigFile() jsonInputStruct {
 	_, err = os.Stat(fileDatabase)
     if os.IsNotExist(err) {
 		_, optDbFileErr := os.Stat("/opt/webchecks/db.json")
-		if err != nil {
-			log.Fatal(optDbFileErr)
+		if os.IsNotExist(optDbFileErr) {
+			log.Fatal("File doesn't exist! /opt/webchecks/db.json")
 		}
 		content, err = os.ReadFile("/opt/webchecks/db.json")
+		if err != nil {
+			log.Fatal(err)
+		}
     } else {
 		content, err = os.ReadFile(fileDatabase)
+		if err != nil {
+			log.Fatal(err)
+		}
     }
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	jsonData := jsonInputStruct{}
 	err = json.Unmarshal([]byte(content), &jsonData)
