@@ -47,13 +47,13 @@ type certData struct {
 type finalResponseStruct struct {
 	websiteAddress string
 	certEndDate    struct {
-		status                 string
-		days_before_expiration string
-		date                   string
+		status               string
+		daysBeforeExpiration string
+		date                 string
 	}
-	httpStatus     string
-	response_time  string
-	string_present string
+	httpStatus    string
+	responseTime  string
+	stringPresent bool
 }
 
 type jsonInputStruct []struct {
@@ -63,9 +63,9 @@ type jsonInputStruct []struct {
 	Protocol           string `json:"protocol"`
 	String             string `json:"string"`
 	PageToCheck        string `json:"page,omitempty"`
-	YellowResponseTime string `json:"yellow_response_time,omitempty"`
-	RedResponseTime    string `json:"red_response_time,omitempty"`
-	SslAlertTime       int    `json:"amber_days,omitempty"`
+	YellowResponseTime int    `json:"yellow_response_time,omitempty"`
+	RedResponseTime    int    `json:"red_response_time,omitempty"`
+	SslAlertTime       int    `json:"amber_days"`
 }
 
 type jsonOutputStruct struct {
@@ -76,9 +76,9 @@ type jsonOutputStruct struct {
 	Page               string `json:"page,omitempty"`
 	HttpStatus         string `json:"http_status,omitempty"`
 	ResponseTime       string `json:"response_time,omitempty"`
-	YellowResponseTime bool   `json:"yellow_response_time,omitempty"`
-	RedResponseTime    bool   `json:"red_response_time,omitempty"`
-	StringPresent      string `json:"string_present,omitempty"`
+	YellowResponseTime bool   `json:"yellow_response_time"`
+	RedResponseTime    bool   `json:"red_response_time"`
+	StringPresent      bool   `json:"string_present"`
 	StringChecked      string `json:"string_checked,omitempty"`
 	CertEndDate        string `json:"cert_end_date,omitempty"`
 	CertDaysBeforeEnd  string `json:"cert_days_left,omitempty"`
@@ -87,170 +87,164 @@ type jsonOutputStruct struct {
 
 func main() {
 	if jsonOutput {
-		var sites = jsonOutputFuncMulti()
-		var jsonData, _ = json.MarshalIndent(sites, "", "   ")
-		// Save results to a file
+		sites := jsonOutputFuncMulti()
+		jsonData, _ := json.MarshalIndent(sites, "", "   ")
 		if saveResults {
 			err := os.WriteFile("/tmp/results.json", jsonData, 0644)
 			if err != nil {
 				panic(err)
 			}
 		}
-		// Print results to a screen
-		var json_string = string(jsonData)
-		fmt.Println(json_string)
+		jsonString := string(jsonData)
+		fmt.Println(jsonString)
 	} else {
 		renderTableMulti()
 	}
 }
 
 func readConfigFile() jsonInputStruct {
-	// Read and parse JSON DB file
 	content, err := os.ReadFile(fileDatabase)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	jsonData := jsonInputStruct{}
 	err = json.Unmarshal([]byte(content), &jsonData)
 	if err != nil {
-		// return err
 		log.Fatal(err)
 	}
-
-	for _, site := range jsonData {
-		if site.SslAlertTime == 0 || site.SslAlertTime < 1 {
-			site.SslAlertTime = 30
+	for i, v := range jsonData {
+		if v.SslAlertTime <= 0 {
+			jsonData[i].SslAlertTime = 30
+		}
+		if v.YellowResponseTime <= 0 {
+			jsonData[i].YellowResponseTime = 200
+		}
+		if v.RedResponseTime <= 0 {
+			jsonData[i].RedResponseTime = 500
 		}
 	}
-
 	return jsonData
 }
 
 func jsonOutputFuncMulti() []jsonOutputStruct {
-	var jsonOutput = jsonOutputStruct{}
-	var jsonFileInput = readConfigFile()
-	var idNumber = 0
+	jsonOutput := jsonOutputStruct{}
+	jsonFileInput := readConfigFile()
+	idNumber := 0
+	sites := []jsonOutputStruct{}
 
-	var sites = []jsonOutputStruct{}
-
-	var barDescription = "Working..."
-
-	var bar = progressbar.NewOptions(len(jsonFileInput),
+	barDescription := "Working..."
+	bar := progressbar.NewOptions(len(jsonFileInput),
 		progressbar.OptionSetWidth(60),
 		progressbar.OptionClearOnFinish(),
 		progressbar.OptionSetDescription(barDescription),
 	)
 
 	for _, site := range jsonFileInput {
-		var website_address_var = site.SiteAddress
-		var website_port_var = site.Port
-		var website_protocol_var = site.Protocol
-		var website_string_var = site.String
-		var pageToCheck = site.PageToCheck
-		var host = site.Host
-		var page = site.PageToCheck
-		var stringChecked = site.String
+		websiteAddressVar := site.SiteAddress
+		websitePortVar := site.Port
+		websiteProtocolVar := site.Protocol
+		websiteStringVar := site.String
+		pageToCheck := site.PageToCheck
+		host := site.Host
+		page := site.PageToCheck
+		stringChecked := site.String
 
 		if len(page) < 1 {
 			page = "/"
 		}
 
-		var certDataVar = certData{}
-		if website_protocol_var == "http" {
+		certDataVar := certData{}
+		if websiteProtocolVar == "http" {
 			certDataVar.date = "N/A"
 			certDataVar.status = "N/A"
 			certDataVar.daysBeforeExpiration = "N/A"
 		} else {
-			certDataVar = checkCertDate(website_address_var, site.Port, site.Protocol, site.SslAlertTime)
+			certDataVar = checkCertDate(websiteAddressVar, site.Port, site.Protocol, site.SslAlertTime)
 		}
 
-		var check_response_code_var = checkResponseCode(website_address_var, website_port_var, website_protocol_var)
-		var check_response_time_var = checkResponseTime(website_address_var, website_port_var, website_protocol_var)
-		var check_for_string_var = checkForString(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
+		checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
+		checkResponseTimeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
+		checkForStringVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
 
-		var responseVar = finalResponseStruct{}
+		responseVar := finalResponseStruct{}
 		responseVar.certEndDate.status = certDataVar.status
 		responseVar.certEndDate.date = certDataVar.date
-		responseVar.certEndDate.days_before_expiration = certDataVar.daysBeforeExpiration
+		responseVar.certEndDate.daysBeforeExpiration = certDataVar.daysBeforeExpiration
 
-		responseVar.websiteAddress = website_address_var
-		responseVar.httpStatus = check_response_code_var
-		responseVar.response_time = check_response_time_var
-		responseVar.string_present = check_for_string_var
+		responseVar.websiteAddress = websiteAddressVar
+		responseVar.httpStatus = checkResponseCodeVar
+		responseVar.responseTime = checkResponseTimeVar.time
+		responseVar.stringPresent = checkForStringVar
 
 		idNumber = idNumber + 1
-		var id_string = strconv.Itoa(idNumber)
-		jsonOutput.ID = id_string
+		idString := strconv.Itoa(idNumber)
+		jsonOutput.ID = idString
 		jsonOutput.SiteAddress = responseVar.websiteAddress
-		jsonOutput.PageChecked = website_protocol_var + "://" + website_address_var + ":" + website_port_var + page
+		jsonOutput.PageChecked = websiteProtocolVar + "://" + websiteAddressVar + ":" + websitePortVar + page
 		jsonOutput.HttpStatus = responseVar.httpStatus
-		jsonOutput.ResponseTime = responseVar.response_time
-		jsonOutput.StringPresent = responseVar.string_present
+		jsonOutput.ResponseTime = checkResponseTimeVar.time
+		jsonOutput.YellowResponseTime = checkResponseTimeVar.yellow
+		jsonOutput.RedResponseTime = checkResponseTimeVar.red
+		jsonOutput.StringPresent = responseVar.stringPresent
 		jsonOutput.CertStatus = responseVar.certEndDate.status
 		jsonOutput.CertEndDate = responseVar.certEndDate.date
-		jsonOutput.CertDaysBeforeEnd = responseVar.certEndDate.days_before_expiration
+		jsonOutput.CertDaysBeforeEnd = responseVar.certEndDate.daysBeforeExpiration
 		jsonOutput.Host = host
 		jsonOutput.Page = page
 		jsonOutput.StringChecked = stringChecked
 		sites = append(sites, jsonOutput)
-
 		if err := bar.Add(1); err != nil {
 			log.Fatal("Can't spawn the progress bar: " + err.Error())
 		}
 	}
-
 	return sites
 }
 
 func renderTableMulti() {
-	var site_list = readConfigFile()
-	var bar_description = "Working... "
-	var id_number = 0
+	siteList := readConfigFile()
+	barDescription := "Working... "
+	idNumber := 0
 
-	var bar = progressbar.NewOptions(len(site_list),
+	bar := progressbar.NewOptions(len(siteList),
 		progressbar.OptionSetWidth(60),
 		progressbar.OptionClearOnFinish(),
-		progressbar.OptionSetDescription(bar_description),
+		progressbar.OptionSetDescription(barDescription),
 	)
 
-	// Create a table
 	t := table.New(os.Stdout)
 	t.SetAlignment(table.AlignCenter, table.AlignLeft, table.AlignLeft, table.AlignCenter, table.AlignCenter, table.AlignCenter, table.AlignLeft)
 	t.SetDividers(table.UnicodeRoundedDividers)
 	t.SetAutoMergeHeaders(true)
-
-	// Set headers and footers
-	var headerID = boldFont + "ID" + resetStyle
-	var headerHost = boldFont + "Host" + resetStyle
-	var headerWebsiteAddress = boldFont + "Website address" + resetStyle
-	var headerCertificateEndDate = boldFont + "Certificate end date" + resetStyle
-	var headerHttpStatus = boldFont + "HTTP status" + resetStyle
-	var headerResponseTime = boldFont + "Response time (ms)" + resetStyle
-	var headerStringChecked = boldFont + "String Check" + resetStyle
+	headerID := boldFont + "ID" + resetStyle
+	headerHost := boldFont + "Host" + resetStyle
+	headerWebsiteAddress := boldFont + "Website address" + resetStyle
+	headerCertificateEndDate := boldFont + "Certificate end date" + resetStyle
+	headerHttpStatus := boldFont + "HTTP status" + resetStyle
+	headerResponseTime := boldFont + "Response time (ms)" + resetStyle
+	headerStringChecked := boldFont + "String Check" + resetStyle
 	t.SetHeaders(headerID, headerHost, headerWebsiteAddress, headerCertificateEndDate, headerHttpStatus, headerResponseTime, headerStringChecked)
 	t.SetLineStyle(table.StyleBrightCyan)
 
-	for _, site := range site_list {
-		var website_address_var = site.SiteAddress
-		var website_port_var = site.Port
-		var website_protocol_var = site.Protocol
-		var website_string_var = site.String
-		var pageToCheck = site.PageToCheck
-		var host = site.Host
-		var page = site.PageToCheck
+	for _, site := range siteList {
+		websiteAddressVar := site.SiteAddress
+		websitePortVar := site.Port
+		websiteProtocolVar := site.Protocol
+		websiteStringVar := site.String
+
+		pageToCheck := site.PageToCheck
+		host := site.Host
+		page := site.PageToCheck
 		if len(page) < 1 {
 			page = "/"
 		}
-		var stringChecked = site.String
+		stringChecked := site.String
 
-		checkCertDateVar := checkCertDate(website_address_var, website_port_var, website_protocol_var, site.SslAlertTime)
+		checkCertDateVar := checkCertDate(websiteAddressVar, websitePortVar, websiteProtocolVar, site.SslAlertTime)
+		checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
+		checkResponseTimeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
+		checkForStringVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
 
-		var check_response_code_var = checkResponseCode(website_address_var, website_port_var, website_protocol_var)
-		var check_response_time_var = checkResponseTime(website_address_var, website_port_var, website_protocol_var)
-		var check_for_string_var = checkForString(website_address_var, website_port_var, website_protocol_var, website_string_var, pageToCheck)
-
-		var responseVar = finalResponseStruct{}
+		responseVar := finalResponseStruct{}
 		responseVar.certEndDate.date = checkCertDateVar.date
 
 		if checkCertDateVar.status == "yellow" {
@@ -259,41 +253,39 @@ func renderTableMulti() {
 			responseVar.certEndDate.date = redColor + responseVar.certEndDate.date + resetStyle
 		}
 
-		responseVar.websiteAddress = website_address_var
-		responseVar.httpStatus = check_response_code_var
-		responseVar.response_time = check_response_time_var
-
-		var websitePageChecked = website_protocol_var + "://" + website_address_var + ":" + website_port_var + page
+		responseVar.websiteAddress = websiteAddressVar
+		responseVar.httpStatus = checkResponseCodeVar
+		if checkResponseTimeVar.yellow {
+			checkResponseTimeVar.time = yellowColor + checkResponseTimeVar.time + resetStyle
+		}
+		if checkResponseTimeVar.red {
+			checkResponseTimeVar.time = redColor + checkResponseTimeVar.time + resetStyle
+		}
+		websitePageChecked := websiteProtocolVar + "://" + websiteAddressVar + ":" + websitePortVar + page
 
 		var stringPresent string
-		if check_for_string_var == "Yes" {
+		if checkForStringVar {
 			stringPresent = " (present)"
 		} else {
 			stringPresent = redColor + " (missing)" + resetStyle
 		}
-		var stringCheck = stringChecked + stringPresent
+		stringCheck := stringChecked + stringPresent
 
-		// Start adding table rows
-		id_number = id_number + 1
-		var id_string = strconv.Itoa(id_number)
-		t.AddRow(id_string, host, websitePageChecked, responseVar.certEndDate.date, responseVar.httpStatus, responseVar.response_time, stringCheck)
-
+		idNumber = idNumber + 1
+		idString := strconv.Itoa(idNumber)
+		t.AddRow(idString, host, websitePageChecked, responseVar.certEndDate.date, responseVar.httpStatus, checkResponseTimeVar.time, stringCheck)
 		if err := bar.Add(1); err != nil {
 			log.Fatal("Can't spawn the progress bar: " + err.Error())
 		}
 	}
-
-	// Render the table to screen
 	t.Render()
 }
 
-func checkCertDate(site_address string, port string, protocol string, sslAmberDays int) certData {
-	if site_address == "" {
+func checkCertDate(siteAddress string, port string, protocol string, sslAmberDays int) certData {
+	if siteAddress == "" {
 		log.Fatal("Site address was not specified!")
 	}
-
-	var certDataVar = certData{}
-
+	certDataVar := certData{}
 	if protocol != "https" {
 		certDataVar.date = "N/A"
 		certDataVar.status = "N/A"
@@ -301,15 +293,9 @@ func checkCertDate(site_address string, port string, protocol string, sslAmberDa
 		return certDataVar
 	}
 
-	conf := &tls.Config{
-		InsecureSkipVerify: true,
-	}
-
-	conn, err := tls.Dial("tcp", (site_address + ":" + port), conf)
+	conf := &tls.Config{InsecureSkipVerify: true}
+	conn, err := tls.Dial("tcp", (siteAddress + ":" + port), conf)
 	if err != nil {
-		// var error = "CERT_DATE FATAL ERROR: Can't access your website -> " + err.Error()
-		// fmt.Fprintln(os.Stderr, error)
-		// os.Exit(1)
 		fmt.Println("\nERR_IN_FUNC: check_cert_date: " + err.Error())
 		certDataVar.date = "N/A"
 		certDataVar.status = "N/A"
@@ -320,45 +306,44 @@ func checkCertDate(site_address string, port string, protocol string, sslAmberDa
 	defer conn.Close()
 	certs := conn.ConnectionState().PeerCertificates
 
-	var cert_status string
-	var cert_date = certs[0].NotAfter.Format("02/01/2006")
-	var daysUntilExp = (time.Since(certs[0].NotAfter).Hours() / float64(sslAmberDays)) * -1
-	var daysUntilExpStr = fmt.Sprintf("%.0f", daysUntilExp)
+	var certStatus string
+	certDate := certs[0].NotAfter.Format("02/01/2006")
+	daysUntilExp := (time.Since(certs[0].NotAfter).Hours() / float64(sslAmberDays)) * -1
+	daysUntilExpStr := fmt.Sprintf("%.0f", daysUntilExp)
 
-	var ember_cert_status = time.Now().AddDate(0, 0, +sslAmberDays)
-
-	if ember_cert_status.Before(certs[0].NotAfter) {
-		cert_status = "green"
-	} else if ember_cert_status == certs[0].NotAfter {
-		cert_status = "green"
+	emberCertStatus := time.Now().AddDate(0, 0, +sslAmberDays)
+	if emberCertStatus.Before(certs[0].NotAfter) {
+		certStatus = "green"
+	} else if emberCertStatus == certs[0].NotAfter {
+		certStatus = "green"
 	} else if time.Now() == certs[0].NotAfter {
-		cert_status = "red"
+		certStatus = "red"
 	} else if time.Now().After(certs[0].NotAfter) {
-		cert_status = "red"
+		certStatus = "red"
 	} else {
-		cert_status = "yellow"
+		certStatus = "yellow"
 	}
 
-	certDataVar.status = cert_status
-	certDataVar.date = cert_date
+	certDataVar.status = certStatus
+	certDataVar.date = certDate
 	certDataVar.daysBeforeExpiration = daysUntilExpStr
 
 	return certDataVar
 }
 
-func checkResponseCode(site_address, port, protocol string) string {
+func checkResponseCode(siteAddress, port, protocol string) string {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 
-	http_client := &http.Client{
+	httpClient := &http.Client{
 		Timeout:   10 * time.Second,
 		Transport: tr,
 	}
 
-	req, _ := http.NewRequest("GET", (protocol + "://" + site_address + ":" + port), nil)
-	req.Host = site_address
-	resp, err := http_client.Do(req)
+	req, _ := http.NewRequest("GET", (protocol + "://" + siteAddress + ":" + port), nil)
+	req.Host = siteAddress
+	resp, err := httpClient.Do(req)
 
 	if err != nil {
 		fmt.Println("\nERR_IN_FUNC: check_response_code: " + err.Error())
@@ -366,44 +351,57 @@ func checkResponseCode(site_address, port, protocol string) string {
 	}
 
 	defer resp.Body.Close()
-
-	var status_code = strconv.Itoa(resp.StatusCode)
-	return status_code
+	return strconv.Itoa(resp.StatusCode)
 }
 
-func checkResponseTime(site_address, port, protocol string) string {
-	var start_time = time.Now()
+type ResponseTime struct {
+	time   string
+	red    bool
+	yellow bool
+}
 
+func checkResponseTime(siteAddress string, port string, protocol string, redResponseTime int, yellowResponseTime int) ResponseTime {
+	startTime := time.Now()
+	responseTime := ResponseTime{}
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-
-	http_client := &http.Client{
+	httpClient := &http.Client{
 		Timeout:   10 * time.Second,
 		Transport: tr,
 	}
-
-	req, _ := http.NewRequest("GET", (protocol + "://" + site_address + ":" + port), nil)
-	req.Host = site_address
-	resp, err := http_client.Do(req)
-
+	req, err := http.NewRequest("GET", (protocol + "://" + siteAddress + ":" + port), nil)
 	if err != nil {
 		fmt.Println("\nERR_IN_FUNC: check_response_time: " + err.Error())
-		return "ERROR"
+		responseTime.time = "ERROR"
+		return responseTime
+	}
+	req.Host = siteAddress
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		fmt.Println("\nERR_IN_FUNC: check_response_time: " + err.Error())
+		responseTime.time = "ERROR"
+		return responseTime
+	}
+	defer resp.Body.Close()
+
+	rTime := time.Since(startTime).Milliseconds()
+	responseTime.time = strconv.FormatInt(rTime, 10)
+	if rTime > int64(yellowResponseTime) {
+		responseTime.yellow = true
+	}
+	if rTime > int64(redResponseTime) {
+		responseTime.red = true
 	}
 
-	defer resp.Body.Close()
-	var time_elapsed = strconv.FormatInt(time.Since(start_time).Milliseconds(), 10)
-
-	return time_elapsed
+	return responseTime
 }
 
-func checkForString(site_address, port, protocol, string_to_look_for, pageToCheck string) string {
+func checkForString(siteAddress, port, protocol, stringToLookFor, pageToCheck string) bool {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
-
-	http_client := &http.Client{
+	httpClient := &http.Client{
 		Timeout:   30 * time.Second,
 		Transport: tr,
 	}
@@ -411,35 +409,28 @@ func checkForString(site_address, port, protocol, string_to_look_for, pageToChec
 	if len(pageToCheck) < 1 {
 		pageToCheck = "/"
 	}
-
-	req, _ := http.NewRequest("GET", (protocol + "://" + site_address + ":" + port + pageToCheck), nil)
-	req.Host = site_address
-	resp, err := http_client.Do(req)
-
+	req, err := http.NewRequest("GET", (protocol + "://" + siteAddress + ":" + port + pageToCheck), nil)
 	if err != nil {
 		fmt.Println("\nERR_IN_FUNC: check_for_string: " + err.Error())
-		return "ERROR"
 	}
 
+	req.Host = siteAddress
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		fmt.Println("\nERR_IN_FUNC: check_for_string: " + err.Error())
+	}
 	defer resp.Body.Close()
-
-	// dataInBytes, err := ioutil.ReadAll(resp.Body)
 	dataInBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("\nERR_IN_FUNC: check_for_string: " + err.Error())
-		return "ERROR"
 	}
 
-	var pageContent = string(dataInBytes)
-	var number_of_strings_present = strings.Index(pageContent, string_to_look_for)
+	pageContent := string(dataInBytes)
+	numberOfStringsPresent := strings.Index(pageContent, stringToLookFor)
 
-	var string_present string
-
-	if number_of_strings_present == -1 {
-		string_present = "Not present!"
+	if numberOfStringsPresent == -1 {
+		return false
 	} else {
-		string_present = "Yes"
+		return true
 	}
-
-	return string_present
 }

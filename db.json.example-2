@@ -1,0 +1,26 @@
+[
+    {
+        "site_address":"gateway-it.com",
+        "host": "vm_01",
+        "port":"443",
+        "protocol":"https",
+        "string":"gateway",
+        "amber_days": 10
+    },
+    {
+        "site_address":"gobuffalo.io",
+        "host": "vm_02",
+        "port":"443",
+        "protocol":"https",
+        "string":"development",
+        "yellow_response_time": 50
+    },
+    {
+        "site_address":"google.com",
+        "host": "vm_03",
+        "port":"443",
+        "protocol":"https",
+        "string":"google",
+        "red_response_time":50
+    }
+]
