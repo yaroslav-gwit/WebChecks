@@ -10,6 +10,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aquasecurity/table"
@@ -170,18 +171,38 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 			page = "/"
 		}
 
-		certDataVar := certData{}
+		var wg sync.WaitGroup
+		wg.Add(4)
+
+		var checkResponseCodeVar string
+		var checkResponseTimeVar ResponseTime
+		var checkForStringVar bool
+		var certDataVar certData
+
 		if websiteProtocolVar == "http" {
 			certDataVar.date = "N/A"
 			certDataVar.status = "N/A"
 			certDataVar.daysBeforeExpiration = "N/A"
 		} else {
-			certDataVar = checkCertDate(websiteAddressVar, site.Port, site.Protocol, site.SslAlertTime)
+			go func() {
+				certDataVar = checkCertDate(websiteAddressVar, site.Port, site.Protocol, site.SslAlertTime)
+				wg.Done()
+			}()
 		}
+		go func() {
+			checkResponseCodeVar = checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
+			wg.Done()
+		}()
+		go func() {
+			checkResponseTimeVar = checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
+			wg.Done()
+		}()
+		go func() {
+			checkForStringVar = checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
+			wg.Done()
+		}()
 
-		checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
-		checkResponseTimeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
-		checkForStringVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
+		wg.Wait()
 
 		responseVar := finalResponseStruct{}
 		responseVar.certEndDate.status = certDataVar.status
@@ -256,10 +277,31 @@ func renderTableMulti() {
 		}
 		stringChecked := site.String
 
-		checkCertDateVar := checkCertDate(websiteAddressVar, websitePortVar, websiteProtocolVar, site.SslAlertTime)
-		checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
-		checkResponseTimeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
-		checkForStringVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
+		var wg sync.WaitGroup
+		wg.Add(4)
+		var checkResponseCodeVar string
+		var checkResponseTimeVar ResponseTime
+		var checkForStringVar bool
+		var checkCertDateVar certData
+
+		go func() {
+			checkResponseCodeVar = checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
+			wg.Done()
+		}()
+		go func() {
+			checkResponseTimeVar = checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
+			wg.Done()
+		}()
+		go func() {
+			checkForStringVar = checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
+			wg.Done()
+		}()
+		go func() {
+			checkCertDateVar = checkCertDate(websiteAddressVar, site.Port, site.Protocol, site.SslAlertTime)
+			wg.Done()
+		}()
+
+		wg.Wait()
 
 		responseVar := finalResponseStruct{}
 		responseVar.certEndDate.date = checkCertDateVar.date
