@@ -180,8 +180,8 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 		}
 
 		// checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
-		checkResponseTimeVar, checkResponseCodeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
-		checkForStringVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
+		checkResponseTimeVar, _ := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
+		checkForStringVar, checkResponseCodeVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
 
 		responseVar := finalResponseStruct{}
 		responseVar.certEndDate.status = certDataVar.status
@@ -258,8 +258,8 @@ func renderTableMulti() {
 
 		checkCertDateVar := checkCertDate(websiteAddressVar, websitePortVar, websiteProtocolVar, site.SslAlertTime)
 		// checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
-		checkResponseTimeVar, checkResponseCodeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
-		checkForStringVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
+		checkResponseTimeVar, _ := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
+		checkForStringVar, checkResponseCodeVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
 
 		responseVar := finalResponseStruct{}
 		responseVar.certEndDate.date = checkCertDateVar.date
@@ -415,7 +415,7 @@ func checkResponseTime(siteAddress string, port string, protocol string, redResp
 	return responseTime, strconv.Itoa(resp.StatusCode)
 }
 
-func checkForString(siteAddress, port, protocol, stringToLookFor, pageToCheck string) bool {
+func checkForString(siteAddress, port, protocol, stringToLookFor, pageToCheck string) (bool, string) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
@@ -447,8 +447,8 @@ func checkForString(siteAddress, port, protocol, stringToLookFor, pageToCheck st
 	numberOfStringsPresent := strings.Index(pageContent, stringToLookFor)
 
 	if numberOfStringsPresent == -1 {
-		return false
+		return false, strconv.Itoa(resp.StatusCode)
 	} else {
-		return true
+		return true, strconv.Itoa(resp.StatusCode)
 	}
 }
