@@ -106,7 +106,7 @@ func readConfigFile() jsonInputStruct {
 	var content []byte
 	var err error
 	_, err = os.Stat(fileDatabase)
-    if os.IsNotExist(err) {
+	if os.IsNotExist(err) {
 		_, optDbFileErr := os.Stat("/opt/webchecks/db.json")
 		if os.IsNotExist(optDbFileErr) {
 			log.Fatal("File doesn't exist! /opt/webchecks/db.json")
@@ -115,12 +115,12 @@ func readConfigFile() jsonInputStruct {
 		if err != nil {
 			log.Fatal(err)
 		}
-    } else {
+	} else {
 		content, err = os.ReadFile(fileDatabase)
 		if err != nil {
 			log.Fatal(err)
 		}
-    }
+	}
 
 	jsonData := jsonInputStruct{}
 	err = json.Unmarshal([]byte(content), &jsonData)
@@ -179,8 +179,8 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 			certDataVar = checkCertDate(websiteAddressVar, site.Port, site.Protocol, site.SslAlertTime)
 		}
 
-		checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
-		checkResponseTimeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
+		// checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
+		checkResponseTimeVar, checkResponseCodeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
 		checkForStringVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
 
 		responseVar := finalResponseStruct{}
@@ -257,8 +257,8 @@ func renderTableMulti() {
 		stringChecked := site.String
 
 		checkCertDateVar := checkCertDate(websiteAddressVar, websitePortVar, websiteProtocolVar, site.SslAlertTime)
-		checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
-		checkResponseTimeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
+		// checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
+		checkResponseTimeVar, checkResponseCodeVar := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
 		checkForStringVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
 
 		responseVar := finalResponseStruct{}
@@ -348,28 +348,28 @@ func checkCertDate(siteAddress string, port string, protocol string, sslAmberDay
 	return certDataVar
 }
 
-func checkResponseCode(siteAddress, port, protocol string) string {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
+// func checkResponseCode(siteAddress, port, protocol string) string {
+// 	tr := &http.Transport{
+// 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+// 	}
 
-	httpClient := &http.Client{
-		Timeout:   10 * time.Second,
-		Transport: tr,
-	}
+// 	httpClient := &http.Client{
+// 		Timeout:   10 * time.Second,
+// 		Transport: tr,
+// 	}
 
-	req, _ := http.NewRequest("GET", (protocol + "://" + siteAddress + ":" + port), nil)
-	req.Host = siteAddress
-	resp, err := httpClient.Do(req)
+// 	req, _ := http.NewRequest("GET", (protocol + "://" + siteAddress + ":" + port), nil)
+// 	req.Host = siteAddress
+// 	resp, err := httpClient.Do(req)
 
-	if err != nil {
-		fmt.Println("\nERR_IN_FUNC: check_response_code: " + err.Error())
-		return "ERROR"
-	}
+// 	if err != nil {
+// 		fmt.Println("\nERR_IN_FUNC: check_response_code: " + err.Error())
+// 		return "ERROR"
+// 	}
 
-	defer resp.Body.Close()
-	return strconv.Itoa(resp.StatusCode)
-}
+// 	defer resp.Body.Close()
+// 	return strconv.Itoa(resp.StatusCode)
+// }
 
 type ResponseTime struct {
 	time   string
@@ -377,7 +377,8 @@ type ResponseTime struct {
 	yellow bool
 }
 
-func checkResponseTime(siteAddress string, port string, protocol string, redResponseTime int, yellowResponseTime int) ResponseTime {
+// Returns response time and response code
+func checkResponseTime(siteAddress string, port string, protocol string, redResponseTime int, yellowResponseTime int) (ResponseTime, string) {
 	startTime := time.Now()
 	responseTime := ResponseTime{}
 	tr := &http.Transport{
@@ -391,14 +392,14 @@ func checkResponseTime(siteAddress string, port string, protocol string, redResp
 	if err != nil {
 		fmt.Println("\nERR_IN_FUNC: check_response_time: " + err.Error())
 		responseTime.time = "ERROR"
-		return responseTime
+		return responseTime, "ERROR"
 	}
 	req.Host = siteAddress
 	resp, err := httpClient.Do(req)
 	if err != nil {
 		fmt.Println("\nERR_IN_FUNC: check_response_time: " + err.Error())
 		responseTime.time = "ERROR"
-		return responseTime
+		return responseTime, "ERROR"
 	}
 	defer resp.Body.Close()
 
@@ -411,7 +412,7 @@ func checkResponseTime(siteAddress string, port string, protocol string, redResp
 		responseTime.red = true
 	}
 
-	return responseTime
+	return responseTime, strconv.Itoa(resp.StatusCode)
 }
 
 func checkForString(siteAddress, port, protocol, stringToLookFor, pageToCheck string) bool {
