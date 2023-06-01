@@ -385,7 +385,7 @@ func checkResponseTime(siteAddress string, port string, protocol string, redResp
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	httpClient := &http.Client{
-		Timeout:   10 * time.Second,
+		Timeout:   6 * time.Second,
 		Transport: tr,
 	}
 	req, err := http.NewRequest("GET", (protocol + "://" + siteAddress + ":" + port), nil)
@@ -420,7 +420,7 @@ func checkForString(siteAddress, port, protocol, stringToLookFor, pageToCheck st
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	httpClient := &http.Client{
-		Timeout:   30 * time.Second,
+		Timeout:   6 * time.Second,
 		Transport: tr,
 	}
 
