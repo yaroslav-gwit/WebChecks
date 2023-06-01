@@ -3,9 +3,11 @@ package cmd
 import (
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strconv"
@@ -37,12 +39,6 @@ var (
 		},
 	}
 )
-
-type certData struct {
-	status               string
-	daysBeforeExpiration string
-	date                 string
-}
 
 type finalResponseStruct struct {
 	websiteAddress string
@@ -157,58 +153,75 @@ func jsonOutputFuncMulti() []jsonOutputStruct {
 	)
 
 	for _, site := range jsonFileInput {
-		websiteAddressVar := site.SiteAddress
-		websitePortVar := site.Port
-		websiteProtocolVar := site.Protocol
-		websiteStringVar := site.String
-		pageToCheck := site.PageToCheck
-		host := site.Host
-		page := site.PageToCheck
-		stringChecked := site.String
+		webPageInput := CheckWebPageInput{}
+		webPageInput.siteAddress = site.SiteAddress
+		webPageInput.port = site.Port
+		webPageInput.protocol = site.Protocol
+		webPageInput.stringToLookFor = site.String
+		webPageInput.pageToCheck = site.PageToCheck
+		webPageInput.yellowResponseTime = int64(site.YellowResponseTime)
+		webPageInput.redResponseTime = int64(site.RedResponseTime)
 
-		if len(page) < 1 {
-			page = "/"
+		if len(webPageInput.pageToCheck) < 1 {
+			webPageInput.pageToCheck = "/"
 		}
 
-		certDataVar := certData{}
-		if websiteProtocolVar == "http" {
+		certDataVar := certDataOutputStruct{}
+		certDataVarInput := certDataInputStruct{}
+		certDataVarInput.port = webPageInput.port
+		certDataVarInput.protocol = webPageInput.protocol
+		certDataVarInput.siteAddress = webPageInput.siteAddress
+		certDataVarInput.sslAmberDays = site.SslAlertTime
+		if webPageInput.protocol == "http" {
 			certDataVar.date = "N/A"
 			certDataVar.status = "N/A"
 			certDataVar.daysBeforeExpiration = "N/A"
 		} else {
-			certDataVar = checkCertDate(websiteAddressVar, site.Port, site.Protocol, site.SslAlertTime)
+			var err error
+			certDataVar, err = checkCertDate(certDataVarInput)
+			if err != nil {
+				if err != nil {
+					certDataVar.date = "N/A"
+					certDataVar.daysBeforeExpiration = "N/A"
+					certDataVar.status = "N/A"
+				}
+			}
 		}
 
-		// checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
-		checkResponseTimeVar, _ := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
-		checkForStringVar, checkResponseCodeVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
+		webPageOutput, err := checkWebPage(webPageInput)
+		if err != nil {
+			webPageOutput.httpStatusCode = "503"
+			webPageOutput.responseTime = "N/A"
+			webPageOutput.responseTimeStatusRed = true
+			webPageOutput.responseTimeStatusRed = true
+		}
 
 		responseVar := finalResponseStruct{}
 		responseVar.certEndDate.status = certDataVar.status
 		responseVar.certEndDate.date = certDataVar.date
 		responseVar.certEndDate.daysBeforeExpiration = certDataVar.daysBeforeExpiration
 
-		responseVar.websiteAddress = websiteAddressVar
-		responseVar.httpStatus = checkResponseCodeVar
-		responseVar.responseTime = checkResponseTimeVar.time
-		responseVar.stringPresent = checkForStringVar
+		responseVar.websiteAddress = webPageInput.siteAddress
+		responseVar.httpStatus = webPageOutput.httpStatusCode
+		responseVar.responseTime = webPageOutput.responseTime
+		responseVar.stringPresent = webPageOutput.stringPresent
 
 		idNumber = idNumber + 1
 		idString := strconv.Itoa(idNumber)
 		jsonOutput.ID = idString
 		jsonOutput.SiteAddress = responseVar.websiteAddress
-		jsonOutput.PageChecked = websiteProtocolVar + "://" + websiteAddressVar + ":" + websitePortVar + page
+		jsonOutput.PageChecked = webPageInput.protocol + "://" + webPageInput.siteAddress + ":" + webPageInput.port + webPageInput.pageToCheck
 		jsonOutput.HttpStatus = responseVar.httpStatus
-		jsonOutput.ResponseTime = checkResponseTimeVar.time
-		jsonOutput.YellowResponseTime = checkResponseTimeVar.yellow
-		jsonOutput.RedResponseTime = checkResponseTimeVar.red
+		jsonOutput.ResponseTime = webPageOutput.responseTime
+		jsonOutput.YellowResponseTime = webPageOutput.responseTimeStatusYellow
+		jsonOutput.RedResponseTime = webPageOutput.responseTimeStatusRed
 		jsonOutput.StringPresent = responseVar.stringPresent
 		jsonOutput.CertStatus = responseVar.certEndDate.status
 		jsonOutput.CertEndDate = responseVar.certEndDate.date
 		jsonOutput.CertDaysBeforeEnd = responseVar.certEndDate.daysBeforeExpiration
-		jsonOutput.Host = host
-		jsonOutput.Page = page
-		jsonOutput.StringChecked = stringChecked
+		jsonOutput.Host = site.Host
+		jsonOutput.Page = webPageInput.pageToCheck
+		jsonOutput.StringChecked = webPageInput.stringToLookFor
 		sites = append(sites, jsonOutput)
 		if err := bar.Add(1); err != nil {
 			log.Fatal("Can't spawn the progress bar: " + err.Error())
@@ -243,23 +256,43 @@ func renderTableMulti() {
 	t.SetLineStyle(table.StyleBrightCyan)
 
 	for _, site := range siteList {
-		websiteAddressVar := site.SiteAddress
-		websitePortVar := site.Port
-		websiteProtocolVar := site.Protocol
-		websiteStringVar := site.String
-
-		pageToCheck := site.PageToCheck
-		host := site.Host
-		page := site.PageToCheck
-		if len(page) < 1 {
-			page = "/"
+		if len(site.SiteAddress) < 1 {
+			continue
 		}
-		stringChecked := site.String
 
-		checkCertDateVar := checkCertDate(websiteAddressVar, websitePortVar, websiteProtocolVar, site.SslAlertTime)
-		// checkResponseCodeVar := checkResponseCode(websiteAddressVar, websitePortVar, websiteProtocolVar)
-		checkResponseTimeVar, _ := checkResponseTime(websiteAddressVar, websitePortVar, websiteProtocolVar, site.RedResponseTime, site.YellowResponseTime)
-		checkForStringVar, checkResponseCodeVar := checkForString(websiteAddressVar, websitePortVar, websiteProtocolVar, websiteStringVar, pageToCheck)
+		var webPageInput CheckWebPageInput
+
+		webPageInput.siteAddress = site.SiteAddress
+		webPageInput.port = site.Port
+		webPageInput.protocol = site.Protocol
+		webPageInput.stringToLookFor = site.String
+		webPageInput.pageToCheck = site.PageToCheck
+		webPageInput.yellowResponseTime = int64(site.YellowResponseTime)
+		webPageInput.redResponseTime = int64(site.RedResponseTime)
+
+		if len(webPageInput.pageToCheck) < 1 {
+			webPageInput.pageToCheck = "/"
+		}
+
+		certDataVarInput := certDataInputStruct{}
+		certDataVarInput.port = webPageInput.port
+		certDataVarInput.protocol = webPageInput.protocol
+		certDataVarInput.siteAddress = webPageInput.siteAddress
+		certDataVarInput.sslAmberDays = site.SslAlertTime
+		checkCertDateVar, err := checkCertDate(certDataVarInput)
+		if err != nil {
+			checkCertDateVar.date = "N/A"
+			checkCertDateVar.daysBeforeExpiration = "N/A"
+			checkCertDateVar.status = "N/A"
+		}
+
+		webPageOutput, err := checkWebPage(webPageInput)
+		if err != nil {
+			webPageOutput.httpStatusCode = "503"
+			webPageOutput.responseTime = "N/A"
+			webPageOutput.responseTimeStatusRed = true
+			webPageOutput.responseTimeStatusRed = true
+		}
 
 		responseVar := finalResponseStruct{}
 		responseVar.certEndDate.date = checkCertDateVar.date
@@ -270,27 +303,27 @@ func renderTableMulti() {
 			responseVar.certEndDate.date = redColor + responseVar.certEndDate.date + resetStyle
 		}
 
-		responseVar.websiteAddress = websiteAddressVar
-		responseVar.httpStatus = checkResponseCodeVar
-		if checkResponseTimeVar.yellow {
-			checkResponseTimeVar.time = yellowColor + checkResponseTimeVar.time + resetStyle
+		responseVar.websiteAddress = webPageInput.siteAddress
+		responseVar.httpStatus = webPageOutput.httpStatusCode
+		if webPageOutput.responseTimeStatusYellow {
+			webPageOutput.responseTime = yellowColor + webPageOutput.responseTime + resetStyle
 		}
-		if checkResponseTimeVar.red {
-			checkResponseTimeVar.time = redColor + checkResponseTimeVar.time + resetStyle
+		if webPageOutput.responseTimeStatusRed {
+			webPageOutput.responseTime = redColor + webPageOutput.responseTime + resetStyle
 		}
-		websitePageChecked := websiteProtocolVar + "://" + websiteAddressVar + ":" + websitePortVar + page
+		websitePageChecked := webPageInput.protocol + "://" + webPageInput.siteAddress + ":" + webPageInput.port + webPageInput.pageToCheck
 
 		var stringPresent string
-		if checkForStringVar {
+		if webPageOutput.stringPresent {
 			stringPresent = " (present)"
 		} else {
 			stringPresent = redColor + " (missing)" + resetStyle
 		}
-		stringCheck := stringChecked + stringPresent
+		stringCheck := webPageInput.stringToLookFor + stringPresent
 
 		idNumber = idNumber + 1
 		idString := strconv.Itoa(idNumber)
-		t.AddRow(idString, host, websitePageChecked, responseVar.certEndDate.date, responseVar.httpStatus, checkResponseTimeVar.time, stringCheck)
+		t.AddRow(idString, site.Host, websitePageChecked, responseVar.certEndDate.date, responseVar.httpStatus, webPageOutput.responseTime, stringCheck)
 		if err := bar.Add(1); err != nil {
 			log.Fatal("Can't spawn the progress bar: " + err.Error())
 		}
@@ -298,26 +331,42 @@ func renderTableMulti() {
 	t.Render()
 }
 
-func checkCertDate(siteAddress string, port string, protocol string, sslAmberDays int) certData {
-	if siteAddress == "" {
+type certDataInputStruct struct {
+	siteAddress  string
+	port         string
+	protocol     string
+	sslAmberDays int
+}
+
+type certDataOutputStruct struct {
+	status               string
+	daysBeforeExpiration string
+	date                 string
+}
+
+func checkCertDate(inputStruct certDataInputStruct) (certDataOutputStruct, error) {
+	if inputStruct.siteAddress == "" {
 		log.Fatal("Site address was not specified!")
 	}
-	certDataVar := certData{}
-	if protocol != "https" {
-		certDataVar.date = "N/A"
-		certDataVar.status = "N/A"
-		certDataVar.daysBeforeExpiration = "N/A"
-		return certDataVar
+	certDataOutput := certDataOutputStruct{}
+	if inputStruct.protocol != "https" {
+		certDataOutput.date = "N/A"
+		certDataOutput.status = "N/A"
+		certDataOutput.daysBeforeExpiration = "N/A"
+		return certDataOutput, nil
 	}
 
-	conf := &tls.Config{InsecureSkipVerify: true}
-	conn, err := tls.Dial("tcp", (siteAddress + ":" + port), conf)
+	timeout := 5 * time.Second
+	dialer := &net.Dialer{
+		Timeout: timeout,
+	}
+	conf := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	conn, err := tls.DialWithDialer(dialer, "tcp", inputStruct.siteAddress+":"+inputStruct.port, conf)
 	if err != nil {
-		fmt.Println("\nERR_IN_FUNC: check_cert_date: " + err.Error())
-		certDataVar.date = "N/A"
-		certDataVar.status = "N/A"
-		certDataVar.daysBeforeExpiration = "N/A"
-		return certDataVar
+		return certDataOutputStruct{}, err
 	}
 
 	defer conn.Close()
@@ -325,10 +374,10 @@ func checkCertDate(siteAddress string, port string, protocol string, sslAmberDay
 
 	var certStatus string
 	certDate := certs[0].NotAfter.Format("02/01/2006")
-	daysUntilExp := (time.Since(certs[0].NotAfter).Hours() / float64(sslAmberDays)) * -1
+	daysUntilExp := (time.Since(certs[0].NotAfter).Hours() / float64(inputStruct.sslAmberDays)) * -1
 	daysUntilExpStr := fmt.Sprintf("%.0f", daysUntilExp)
 
-	emberCertStatus := time.Now().AddDate(0, 0, +sslAmberDays)
+	emberCertStatus := time.Now().AddDate(0, 0, +inputStruct.sslAmberDays)
 	if emberCertStatus.Before(certs[0].NotAfter) {
 		certStatus = "green"
 	} else if emberCertStatus == certs[0].NotAfter {
@@ -341,114 +390,84 @@ func checkCertDate(siteAddress string, port string, protocol string, sslAmberDay
 		certStatus = "yellow"
 	}
 
-	certDataVar.status = certStatus
-	certDataVar.date = certDate
-	certDataVar.daysBeforeExpiration = daysUntilExpStr
+	certDataOutput.status = certStatus
+	certDataOutput.date = certDate
+	certDataOutput.daysBeforeExpiration = daysUntilExpStr
 
-	return certDataVar
+	return certDataOutput, nil
 }
 
-// func checkResponseCode(siteAddress, port, protocol string) string {
-// 	tr := &http.Transport{
-// 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-// 	}
-
-// 	httpClient := &http.Client{
-// 		Timeout:   10 * time.Second,
-// 		Transport: tr,
-// 	}
-
-// 	req, _ := http.NewRequest("GET", (protocol + "://" + siteAddress + ":" + port), nil)
-// 	req.Host = siteAddress
-// 	resp, err := httpClient.Do(req)
-
-// 	if err != nil {
-// 		fmt.Println("\nERR_IN_FUNC: check_response_code: " + err.Error())
-// 		return "ERROR"
-// 	}
-
-// 	defer resp.Body.Close()
-// 	return strconv.Itoa(resp.StatusCode)
-// }
-
-type ResponseTime struct {
-	time   string
-	red    bool
-	yellow bool
+type CheckWebPageInput struct {
+	siteAddress        string
+	port               string
+	protocol           string
+	stringToLookFor    string
+	pageToCheck        string
+	yellowResponseTime int64
+	redResponseTime    int64
 }
 
-// Returns response time and response code
-func checkResponseTime(siteAddress string, port string, protocol string, redResponseTime int, yellowResponseTime int) (ResponseTime, string) {
+type CheckWebPageOutput struct {
+	responseTime             string
+	responseTimeStatusRed    bool
+	responseTimeStatusYellow bool
+	stringPresent            bool
+	httpStatusCode           string
+}
+
+func checkWebPage(webPageInput CheckWebPageInput) (CheckWebPageOutput, error) {
+	// fmt.Println(webPageInput)
 	startTime := time.Now()
-	responseTime := ResponseTime{}
-	tr := &http.Transport{
+	webPageOutput := CheckWebPageOutput{}
+
+	httpTransport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	httpClient := &http.Client{
-		Timeout:   6 * time.Second,
-		Transport: tr,
+		Timeout:   10 * time.Second,
+		Transport: httpTransport,
 	}
-	req, err := http.NewRequest("GET", (protocol + "://" + siteAddress + ":" + port), nil)
+
+	if len(webPageInput.pageToCheck) < 1 {
+		webPageInput.pageToCheck = "/"
+	}
+
+	req, err := http.NewRequest("GET", (webPageInput.protocol + "://" + webPageInput.siteAddress + ":" + webPageInput.port + webPageInput.pageToCheck), nil)
 	if err != nil {
-		fmt.Println("\nERR_IN_FUNC: check_response_time: " + err.Error())
-		responseTime.time = "ERROR"
-		return responseTime, "ERROR"
+		return CheckWebPageOutput{}, errors.New("could not perform the request (line 471): " + err.Error())
 	}
-	req.Host = siteAddress
+
+	req.Host = webPageInput.siteAddress
 	resp, err := httpClient.Do(req)
 	if err != nil {
-		fmt.Println("\nERR_IN_FUNC: check_response_time: " + err.Error())
-		responseTime.time = "ERROR"
-		return responseTime, "ERROR"
-	}
-	defer resp.Body.Close()
-
-	rTime := time.Since(startTime).Milliseconds()
-	responseTime.time = strconv.FormatInt(rTime, 10)
-	if rTime > int64(yellowResponseTime) {
-		responseTime.yellow = true
-	}
-	if rTime > int64(redResponseTime) {
-		responseTime.red = true
+		return CheckWebPageOutput{}, err
 	}
 
-	return responseTime, strconv.Itoa(resp.StatusCode)
-}
-
-func checkForString(siteAddress, port, protocol, stringToLookFor, pageToCheck string) (bool, string) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	httpClient := &http.Client{
-		Timeout:   6 * time.Second,
-		Transport: tr,
-	}
-
-	if len(pageToCheck) < 1 {
-		pageToCheck = "/"
-	}
-	req, err := http.NewRequest("GET", (protocol + "://" + siteAddress + ":" + port + pageToCheck), nil)
-	if err != nil {
-		fmt.Println("\nERR_IN_FUNC: check_for_string: " + err.Error())
-	}
-
-	req.Host = siteAddress
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		fmt.Println("\nERR_IN_FUNC: check_for_string: " + err.Error())
-	}
-	defer resp.Body.Close()
 	dataInBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("\nERR_IN_FUNC: check_for_string: " + err.Error())
+		return CheckWebPageOutput{}, err
 	}
 
 	pageContent := string(dataInBytes)
-	numberOfStringsPresent := strings.Index(pageContent, stringToLookFor)
+	numberOfStringsPresent := strings.Index(pageContent, webPageInput.stringToLookFor)
 
+	webPageOutput.stringPresent = true
 	if numberOfStringsPresent == -1 {
-		return false, strconv.Itoa(resp.StatusCode)
-	} else {
-		return true, strconv.Itoa(resp.StatusCode)
+		webPageOutput.stringPresent = false
 	}
+
+	webPageOutput.httpStatusCode = strconv.Itoa(resp.StatusCode)
+	defer resp.Body.Close()
+
+	rTime := time.Since(startTime).Milliseconds()
+	webPageOutput.responseTime = strconv.FormatInt(rTime, 10)
+
+	if rTime > int64(webPageInput.yellowResponseTime) {
+		webPageOutput.responseTimeStatusYellow = true
+	}
+	if rTime > int64(webPageInput.redResponseTime) {
+		webPageOutput.responseTimeStatusRed = true
+	}
+
+	return webPageOutput, nil
 }
