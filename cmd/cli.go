@@ -424,7 +424,7 @@ func checkWebPage(webPageInput CheckWebPageInput) (CheckWebPageOutput, error) {
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	httpClient := &http.Client{
-		Timeout:   10 * time.Second,
+		Timeout:   20 * time.Second,
 		Transport: httpTransport,
 	}
 
